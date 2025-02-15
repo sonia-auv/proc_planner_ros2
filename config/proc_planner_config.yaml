@@ -1,0 +1,17 @@
+/proc_planner_ros2:
+  ros__parameters:
+    ts: 0.1 # s
+    max_depth: 5.0 # m
+    surface_warning: 0.3 # m
+    low_speed:
+      maximum_acceleration: 0.05 # m/s^2
+      maximum_velocity: 0.2 # m/s
+      maximum_angular_rate: 0.3 # rad/s
+    normal_speed:
+      maximum_acceleration: 0.1 # m/s^2
+      maximum_velocity: 0.5 # m/s
+      maximum_angular_rate: 0.5 # rad/s
+    high_speed:
+      maximum_acceleration: 0.15 # m/s^2
+      maximum_velocity: 0.8 # m/s
+      maximum_angular_rate: 0.8 # rad/s

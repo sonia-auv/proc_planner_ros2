@@ -1,0 +1,41 @@
+{
+  "name": "ROS 2 Workspace humble-ros-base",
+  "remoteUser": "sonia",
+  "build": {
+      "dockerfile": "Dockerfile",
+      "args": {
+          "USERNAME": "sonia",
+          "GID": "1000",
+          "UID": "1000"
+      }
+  },
+  "customizations": {
+      "vscode": {
+          "extensions": [
+              "ms-python.python",
+              "charliermarsh.ruff",
+              "ms-vscode.cpptools-extension-pack",
+              "ms-iot.vscode-ros",
+              "smilerobotics.urdf",
+              "redhat.vscode-xml",
+              "tamasfe.even-better-toml",
+              "timonwong.shellcheck",
+              "yzhang.markdown-all-in-one"
+          ],
+          "settings": {
+              "files.associations": {
+                  "*.rviz": "yaml",
+                  "*.srdf": "xml",
+                  "*.urdf": "xml",
+                  "*.xacro": "xml"
+              }
+          }
+      }
+  },
+  "workspaceFolder": "/home/sonia/ros2_sonia_ws/src/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/sonia/ros2_sonia_ws/src/${localWorkspaceFolderBasename},type=bind",
+  "mounts": [],
+  "runArgs": [
+      "--net=host"
+  ]
+}

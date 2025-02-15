@@ -1,0 +1,6 @@
+{
+    "python.globalModuleInstallation": true,
+    "python.autoComplete.extraPaths": [
+        "/home/sonia/ros2_sonia_ws/install/sonia_common_ros2/local/lib/python3.10/dist-packages/"
+    ]
+}
