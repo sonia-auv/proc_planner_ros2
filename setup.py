@@ -13,7 +13,7 @@ setup(
         ('share/' + package_name + '/launch', ['launch/launch.py']),
         ('share/' + package_name + '/config', ['config/proc_planner_config.yaml']),
     ],
-    install_requires=['setuptools','quaternion', 'scipy'],
+    install_requires=['setuptools','numpy', 'scipy'],
     zip_safe=True,
     maintainer='sonia2',
     maintainer_email='log.sonia.club@etsmtl.ca',
