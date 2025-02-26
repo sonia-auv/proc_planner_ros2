@@ -17,7 +17,7 @@ class ProcPlannerNode(Node):
     def __init__(self):
         super().__init__("proc_planner_ros2")
         self._sub_mult_add_pose = self.create_subscription(
-            PoseArray, "/proc_planner/send_multi_add_pose", self._mult_add_pose_cb, 10
+            PoseArray, "/proc_planner/send_pose_array", self._mult_add_pose_cb, 10
         )
         self.get_logger()
         self._sub_curr_target = self.create_subscription(Pose, "/proc_control/current_target", self._curr_target_cb, 10)
