@@ -6,7 +6,7 @@ from rclpy.node import Node
 from sonia_common_ros2.msg import PoseArray
 from geometry_msgs.msg import Pose
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
-from std_msgs.msg import Bool
+from std_msgs.msg import Int8
 
 from proc_planner_ros2.trajectory_generator import TrajectoryGenerator
 
@@ -23,7 +23,7 @@ class ProcPlannerNode(Node):
         self._sub_curr_target = self.create_subscription(Pose, "/proc_control/current_target", self._curr_target_cb, 10)
 
         self._pub_traj = self.create_publisher(MultiDOFJointTrajectoryPoint, "/proc_planner/send_trajectory_list", 10)
-        self._pub_is_valid = self.create_publisher(Bool, "/proc_planner/is_waypoint_valid", 10)
+        self._pub_is_valid = self.create_publisher(Int8, "/proc_planner/is_waypoint_valid", 10)
 
         self._latest_curr_target = None
 
@@ -87,8 +87,8 @@ class ProcPlannerNode(Node):
             return
         traj_gen = TrajectoryGenerator(msg, self._latest_curr_target, self._ros_params, self.get_logger())
 
-        valid_msg = Bool()
-        valid_msg.data = traj_gen.is_valid
+        valid_msg = Int8()
+        valid_msg.data = traj_gen.status
         self._pub_is_valid.publish(valid_msg)
 
         if traj_gen.status == traj_gen.TrajectoryStatus.RECEIVED_VALID_WAYPTS:

@@ -129,18 +129,6 @@ class TrajectoryGenerator:
         """
         return self._status.value
 
-    @property
-    def is_valid(self) -> bool:
-        """
-        Whether the trajectory is valid.
-
-        Returns
-        -------
-            bool: True if the trajectory is valid, False otherwise.
-
-        """
-        return self._status == self.TrajectoryStatus.RECEIVED_VALID_WAYPTS
-
     def compute(self) -> Optional[MultiDOFJointTrajectoryPoint]:
         """
         Compute the trajectory.
