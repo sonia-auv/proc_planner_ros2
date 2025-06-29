@@ -1,6 +1,7 @@
 """Proc Planner Node."""
 
 import rclpy
+from rclpy.qos import QoSProfile, QoSHistoryPolicy, QoSReliabilityPolicy, QoSDurabilityPolicy, QoSLivelinessPolicy, Duration
 from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.node import Node
 from sonia_common_ros2.msg import PoseArray
@@ -22,7 +23,7 @@ class ProcPlannerNode(Node):
         self.get_logger()
         self._sub_curr_target = self.create_subscription(Pose, "/proc_control/current_target", self._curr_target_cb, 10)
 
-        self._pub_traj = self.create_publisher(MultiDOFJointTrajectoryPoint, "/proc_planner/send_trajectory_list", 10)
+        self._pub_traj = self.create_publisher(MultiDOFJointTrajectoryPoint, "/proc_planner/send_trajectory_list", QoSProfile(history=QoSHistoryPolicy.KEEP_ALL, depth=1, reliability=QoSReliabilityPolicy.RELIABLE, durability=QoSDurabilityPolicy.VOLATILE, liveliness=QoSLivelinessPolicy.AUTOMATIC, liveliness_lease_duration=Duration(seconds=5    )))
         self._pub_is_valid = self.create_publisher(Int8, "/proc_planner/is_waypoint_valid", 10)
 
         self._latest_curr_target = None
@@ -78,8 +79,8 @@ class ProcPlannerNode(Node):
             ]):
             self._ros_params[param.name] = param.value
 
-        for param in self._ros_params.items():
-            self.get_logger().info(param + ": " + str(param))
+        for key, value in self._ros_params.items():
+            self.get_logger().info(str(key) + ": " + str(value))
 
     def _mult_add_pose_cb(self, msg: PoseArray):
 

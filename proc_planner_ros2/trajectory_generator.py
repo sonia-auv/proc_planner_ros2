@@ -159,6 +159,7 @@ class TrajectoryGenerator:
 
         self._time_list[0, :] = 0
         self._speed_list[0, 0] = 0
+        self._logger.info(f"{self._quat_list[0, :]}")
         eul = np.rad2deg(Rotation.from_quat(self._quat_list[0, :]).as_euler("ZYX"))
         self._course_list[0, 0] = eul[0]
 
@@ -368,14 +369,22 @@ class TrajectoryGenerator:
         return True
 
     def _interpolate_waypoints(self):
-
-        t = np.arange(
+        
+        t = np.linspace(
             start=self._ros_param["ts"],
-            stop=self._time_list[-1, 0] + self._ros_param["ts"],
-            step=self._ros_param["ts"],
+            stop=np.round(self._time_list[-1, 0] + self._ros_param["ts"], 1),
+            num=self._traj_position[:, 0].shape[0]
         )
-
+        # t = np.arange(
+        #     start=self._ros_param["ts"],
+        #     stop=self._time_list[-1, 0] + self._ros_param["ts"],
+        #     step=self._ros_param["ts"],
+        #     dtype=np.float64
+        # )
+        self._logger.warning(f"{np.round(self._time_list[-1, 0] + self._ros_param['ts'], 1)}")
+        self._logger.warning(f"{t}")
         self._traj_position[:, 0] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 0], t, False).T
+
         self._traj_position[:, 1] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 1], t, False).T
         self._traj_position[:, 2] = (PchipInterpolator(self._time_list[:, 0], self._point_list[:, 2])(t)).T
 

@@ -13,6 +13,6 @@ def generate_launch_description():
         Node(
             package='proc_planner_ros2',
             executable='proc_planner_ros2',
-            parameters=[config]
+            parameters=[config],
         ),
     ])
