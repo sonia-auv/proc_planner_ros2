@@ -10,7 +10,7 @@ from geometry_msgs.msg import Transform, Twist
 from sonia_common_ros2.msg import Pose as soniaPose
 from sonia_common_ros2.msg import PoseArray
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
-from scipy.spatial.transform import Rotation
+from scipy.spatial.transform import Rotation, Slerp
 from scipy.interpolate import PchipInterpolator, CubicSpline
 from scipy.ndimage import map_coordinates
 
@@ -94,7 +94,7 @@ class TrajectoryGenerator:
 
         # Calculate the time between each waypoint
         if self._status == self.TrajectoryStatus.RECEIVED_VALID_WAYPTS and bool(self._compute_time_arrival()):
-            self._nb_points = int(np.round(self._time_list[-1][0] / self._ros_param["ts"]))
+            self._nb_points = int(np.round(self._time_list[-1][0] / self._ros_param["ts"])) + 1
         else:
             self._nb_points = 1
 
@@ -110,12 +110,7 @@ class TrajectoryGenerator:
         #     self._logger.warning("Trajectory breaches water surface")
 
         # Define the length of the trajectory
-        self._traj_position = np.zeros((self._nb_points, 3), np.float64)
-        self._traj_quat = np.zeros((self._nb_points, 4), np.float64)
-        self._traj_body_velocity = np.zeros((self._nb_points, 3), np.float64)
-        self._traj_angular_rates = np.zeros((self._nb_points, 3), np.float64)
-        self._traj_linear_acceleration = np.zeros((self._nb_points, 3), np.float64)
-        self._traj_anglular_acceleration = np.zeros((self._nb_points, 3), np.float64)
+       
 
     @property
     def status(self) -> int:
@@ -369,24 +364,27 @@ class TrajectoryGenerator:
         return True
 
     def _interpolate_waypoints(self):
-        
-        t = np.linspace(
-            start=self._ros_param["ts"],
-            stop=np.round(self._time_list[-1, 0] + self._ros_param["ts"], 1),
-            num=self._traj_position[:, 0].shape[0]
-        )
-        # t = np.arange(
-        #     start=self._ros_param["ts"],
-        #     stop=self._time_list[-1, 0] + self._ros_param["ts"],
-        #     step=self._ros_param["ts"],
-        #     dtype=np.float64
-        # )
-        self._logger.warning(f"{np.round(self._time_list[-1, 0] + self._ros_param['ts'], 1)}")
-        self._logger.warning(f"{t}")
-        self._traj_position[:, 0] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 0], t, False).T
+        t_start = self._time_list[0, 0]
+        t_end = self._time_list[-1, 0]
+        ts = self._ros_param["ts"]
 
+        t = np.arange(t_start, t_end + ts, ts)
+        t = np.clip(t, t_start, t_end)
+        self._nb_points = len(t)
+
+        self._traj_position = np.zeros((self._nb_points, 3), np.float64)
+        self._traj_quat = np.zeros((self._nb_points, 4), np.float64)
+        self._traj_body_velocity = np.zeros((self._nb_points, 3), np.float64)
+        self._traj_angular_rates = np.zeros((self._nb_points, 3), np.float64)
+        self._traj_linear_acceleration = np.zeros((self._nb_points, 3), np.float64)
+        self._traj_anglular_acceleration = np.zeros((self._nb_points, 3), np.float64)
+
+        self._logger.warning(f"Trajectory time range: 0 to {self._time_list[-1, 0]}")
+        self._logger.warning(f"Time samples: {t}")
+
+        self._traj_position[:, 0] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 0], t, False).T
         self._traj_position[:, 1] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 1], t, False).T
-        self._traj_position[:, 2] = (PchipInterpolator(self._time_list[:, 0], self._point_list[:, 2])(t)).T
+        self._traj_position[:, 2] = PchipInterpolator(self._time_list[:, 0], self._point_list[:, 2])(t).T
 
         self._traj_body_velocity[:, 0] = np.append([0], np.diff(self._traj_position[:, 0]))
         self._traj_body_velocity[:, 1] = np.append([0], np.diff(self._traj_position[:, 1]))
@@ -396,10 +394,11 @@ class TrajectoryGenerator:
         self._traj_linear_acceleration[:, 1] = np.append([0], np.diff(self._traj_body_velocity[:, 1]))
         self._traj_linear_acceleration[:, 2] = np.append([0], np.diff(self._traj_body_velocity[:, 2]))
 
-        self._traj_quat[:, 0] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 0])(t).T
-        self._traj_quat[:, 1] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 1])(t).T
-        self._traj_quat[:, 2] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 2])(t).T
-        self._traj_quat[:, 3] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 3])(t).T
+        key_times = self._time_list[:, 0].flatten()
+        key_rots = Rotation.from_quat(self._quat_list)
+        slerp = Slerp(key_times, key_rots)
+        interp_rots = slerp(t)
+        self._traj_quat[:, :] = interp_rots.as_quat()
 
         qdot = np.zeros((self._nb_points, 4))
         qdot[:, 0] = np.append([0], np.diff(self._traj_quat[:, 0]))
@@ -413,21 +412,14 @@ class TrajectoryGenerator:
             if i > 0 and np.dot(self._traj_quat[i - 1, :], self._traj_quat[i, :]) < 0:
                 self._traj_quat[i, :] = -self._traj_quat[i, :]
 
-            self._traj_body_velocity[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(
-                self._traj_body_velocity[i, :]
-            )
-
-            self._traj_angular_rates[i, :] = self._quat_to_angular_rates(self._traj_quat[i, :], qdot[i, :])
-
-            self._traj_angular_rates[i, :] = -self._traj_angular_rates[i, :]
-
-            self._traj_linear_acceleration[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(
-                self._traj_linear_acceleration[i, :]
-            )
+            self._traj_body_velocity[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(self._traj_body_velocity[i, :])
+            self._traj_angular_rates[i, :] = -self._quat_to_angular_rates(self._traj_quat[i, :], qdot[i, :])
+            self._traj_linear_acceleration[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(self._traj_linear_acceleration[i, :])
 
         self._traj_anglular_acceleration[:, 0] = np.append([0], np.diff(self._traj_angular_rates[:, 0]))
         self._traj_anglular_acceleration[:, 1] = np.append([0], np.diff(self._traj_angular_rates[:, 1]))
         self._traj_anglular_acceleration[:, 2] = np.append([0], np.diff(self._traj_angular_rates[:, 2]))
+
 
     def _send_waypoints(self):
         traj_msg = MultiDOFJointTrajectoryPoint()
