@@ -7,6 +7,13 @@
   <maintainer email="log.sonia.club@etsmtl.ca">S.O.N.I.A. Software Team</maintainer>
   <license>BSD 3-Clause License</license>
 
+  <depend>rclpy</depend>
+  <depend>rcl_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>trajectory_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sonia_common_ros2</depend>
+  
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

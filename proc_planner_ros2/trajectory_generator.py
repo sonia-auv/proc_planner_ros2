@@ -1,24 +1,50 @@
+# Copyright 2025 SONIA AUV
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#
+#    * Neither the name of the SONIA AUV nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
+
 """Trajectory Generator module."""
 
 from enum import IntEnum
 from typing import Optional, Tuple
 
+from geometry_msgs.msg import Pose as geoPose
+from geometry_msgs.msg import Transform, Twist
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Pose as geoPose, PoseStamped
-from geometry_msgs.msg import Transform, Twist
+from scipy.interpolate import CubicSpline, PchipInterpolator
+from scipy.ndimage import map_coordinates
+from scipy.spatial.transform import Rotation, Slerp
 from sonia_common_ros2.msg import Pose as soniaPose
 from sonia_common_ros2.msg import PoseArray
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
-from scipy.spatial.transform import Rotation, Slerp
-from scipy.interpolate import PchipInterpolator, CubicSpline
-from scipy.ndimage import map_coordinates
-
-from builtin_interfaces.msg import Time
-from nav_msgs.msg import Path
-from visualization_msgs.msg import Marker, MarkerArray
 
 
+# pylint: disable=too-many-instance-attributes
 class TrajectoryGenerator:
     """
     Calculation block that will generate the trajectory given the input waypoints.
@@ -67,7 +93,7 @@ class TrajectoryGenerator:
 
         if self._mult_add_pose_msg.poses[-1].fine != 0:
             self._mult_add_pose_msg.poses[-1].fine = 0.0
-            self._logger.warning(" proc_planner: last waypont must have fine param set to 0")
+            self._logger.warning(' proc_planner: last waypont must have fine param set to 0')
 
         # supplementary points for rounding
         supp_point = 0
@@ -87,25 +113,25 @@ class TrajectoryGenerator:
         # Find initial waypoint
         if not self._get_initial_waypoint(self._current_position_msg):
             self._status = self.TrajectoryStatus.ERR_INVALID_CURR_POS
-            self._logger.info("initial waypoint not received")
+            self._logger.info('initial waypoint not received')
 
         # Validate the interpolation Method
         if not bool(self._interp_strategy(0, 0, 0, True)):
             self._status = self.TrajectoryStatus.ERR_INVALID_INTERP_METHOD
-            self._logger.info("Interpolation strategy is not recognized")
+            self._logger.info('Interpolation strategy is not recognized')
 
         self._process_waypoints()
 
         # Calculate the time between each waypoint
         if self._status == self.TrajectoryStatus.RECEIVED_VALID_WAYPTS and bool(self._compute_time_arrival()):
-            self._nb_points = int(np.round(self._time_list[-1][0] / float(self._ros_param["ts"])))
+            self._nb_points = int(np.round(self._time_list[-1][0] / float(self._ros_param['ts'])))
         else:
             self._nb_points = 1
 
         # Validate max depth
-        if np.max(self._point_list[:, 2]) > self._ros_param["max_depth"]:
+        if np.max(self._point_list[:, 2]) > self._ros_param['max_depth']:
             self._status = self.TrajectoryStatus.ERR_TRAJ_EXCEDED_MAX_DEPTH
-            self._logger.warning("Trajectory exceeded max depth")
+            self._logger.warning('Trajectory exceeded max depth')
 
         # TODO: Validate with Missions
         # Validate if sub will breach water surface
@@ -163,13 +189,13 @@ class TrajectoryGenerator:
 
         self._time_list[0, :] = 0
         self._speed_list[0, 0] = 0
-        eul = np.rad2deg(Rotation.from_quat(self._quat_list[0, :]).as_euler("ZYX"))
+        eul = np.rad2deg(Rotation.from_quat(self._quat_list[0, :]).as_euler('ZYX'))
         self._course_list[0, 0] = eul[0]
 
         # Copy points to the second value to force inital acceleration to zero
         self._point_list[1, :] = self._point_list[0, :]
         self._quat_list[1, :] = self._quat_list[0, :]
-        self._time_list[1, :] = float(self._ros_param["ts"])
+        self._time_list[1, :] = float(self._ros_param['ts'])
         self._course_list[0, 1] = eul[0]
         self._speed_list[0, 1] = self._speed_list[0, 0]
         return True
@@ -195,7 +221,7 @@ class TrajectoryGenerator:
         elif self._mult_add_pose_msg.interpolation_method == PoseArray.INTERPOLATION_SPLINE:
             if not verif:
                 sample_indices = (sample - time_list[0]) / (time_list[-1] - time_list[0])
-                traj_list = map_coordinates(point_list, sample_indices, order=3, mode="nearest")
+                traj_list = map_coordinates(point_list, sample_indices, order=3, mode='nearest')
             else:
                 traj_list = 1
         else:
@@ -205,7 +231,7 @@ class TrajectoryGenerator:
     def _process_waypoints(self) -> None:
         for i, pose in enumerate(self._mult_add_pose_msg.poses):
             q = Rotation.from_euler(
-                "zyx",
+                'zyx',
                 np.deg2rad([pose.orientation.z, pose.orientation.y, pose.orientation.x]),
             ).as_quat()
             p = np.array([pose.position.x, pose.position.y, pose.position.z])
@@ -259,7 +285,7 @@ class TrajectoryGenerator:
 
                 if not valid:
                     self._status = self.TrajectoryStatus.ERR_RADIUS_TOO_LARGE
-                    self._logger.info("Circle radius is to large.")
+                    self._logger.info('Circle radius is to large.')
                     return
 
                 # Declare waypoints
@@ -287,6 +313,7 @@ class TrajectoryGenerator:
             self._course_list[0, -1] = self._course_list[0, -2]
             self._speed_list[0, -1] = self._speed_list[0, -2]
 
+    # pylint: disable=too-many-locals
     def _inscribed_circles(self, i) -> Tuple[bool, float, float]:
         status = False
         p01 = 0
@@ -324,6 +351,7 @@ class TrajectoryGenerator:
             status = True
 
         return status, p01, p12
+    # pylint: enable=too-many-locals
 
     def _compute_time_arrival(self) -> bool:
         for i in range(1, self._n):
@@ -332,19 +360,19 @@ class TrajectoryGenerator:
             vamax = 0
             speed = self._speed_list[0, i]
             if speed == 0:
-                amax = float(self._ros_param["normal_speed.maximum_acceleration"])
-                vlmax = float(self._ros_param["normal_speed.maximum_velocity"])
-                vamax = float(self._ros_param["normal_speed.maximum_angular_rate"])
+                amax = float(self._ros_param['normal_speed.maximum_acceleration'])
+                vlmax = float(self._ros_param['normal_speed.maximum_velocity'])
+                vamax = float(self._ros_param['normal_speed.maximum_angular_rate'])
             elif speed == 1:
-                amax = self._ros_param["high_speed.maximum_acceleration"]
-                vlmax = self._ros_param["high_speed.maximum_velocity"]
-                vamax = self._ros_param["high_speed.maximum_angular_rate"]
+                amax = self._ros_param['high_speed.maximum_acceleration']
+                vlmax = self._ros_param['high_speed.maximum_velocity']
+                vamax = self._ros_param['high_speed.maximum_angular_rate']
             elif speed == 2:
-                amax = self._ros_param["low_speed.maximum_acceleration"]
-                vlmax = self._ros_param["low_speed.maximum_velocity"]
-                vamax = self._ros_param["low_speed.maximum_angular_rate"]
+                amax = self._ros_param['low_speed.maximum_acceleration']
+                vlmax = self._ros_param['low_speed.maximum_velocity']
+                vamax = self._ros_param['low_speed.maximum_angular_rate']
             else:
-                self._logger.info("Speed not recognized")
+                self._logger.info('Speed not recognized')
                 return False
 
             d = np.linalg.norm(self._point_list[i, :] - self._point_list[i - 1, :])
@@ -362,15 +390,14 @@ class TrajectoryGenerator:
             travel_angle = 2 * np.arctan2(np.linalg.norm(q_rel[1:3]), q_rel[0])
             ta = travel_angle / vamax
 
-            tmax = np.max(np.array([tl, ta, float(self._ros_param["ts"])]))
+            tmax = np.max(np.array([tl, ta, float(self._ros_param['ts'])]))
 
-            t_residual = np.mod(tmax, float(self._ros_param["ts"]))
+            t_residual = np.mod(tmax, float(self._ros_param['ts']))
             if t_residual > 0:
-                tmax = tmax + (float(self._ros_param["ts"]) - t_residual)
+                tmax = tmax + (float(self._ros_param['ts']) - t_residual)
 
             self._time_list[i, 0] = self._time_list[i - 1, 0] + tmax
         return True
-
 
     def _interpolate_quaternions(self, t):
         key_times = self._time_list[:, 0]
@@ -382,7 +409,7 @@ class TrajectoryGenerator:
     def _interpolate_waypoints(self):
 
         t = np.linspace(
-            start=float(self._ros_param["ts"]),
+            start=float(self._ros_param['ts']),
             stop=np.round(self._time_list[-1, 0], 1),
             num=self._traj_position[:, 0].shape[0]
         )
@@ -493,7 +520,7 @@ class TrajectoryGenerator:
 
     @staticmethod
     def _get_course_angle(q):
-        eul = Rotation.from_quat(q).as_euler("ZYX", degrees=True)
+        eul = Rotation.from_quat(q).as_euler('ZYX', degrees=True)
         if eul[0] < 0:
             eul[0] += 360
 
@@ -533,54 +560,3 @@ class TrajectoryGenerator:
         angular_rates = -(inv_e2 @ q_dot)  # Matrix multiplication
 
         return angular_rates
-
-
-    def to_nav_path(self, frame_id: str = "map"):
-        path_msg = Path()
-        path_msg.header.frame_id = frame_id
-        # path_msg.header.stamp = self._logger.get_clock().now().to_msg()
-
-        for i in range(self._nb_points):
-            pose = PoseStamped()
-            pose.header.frame_id = frame_id
-            pose.header.stamp = path_msg.header.stamp
-            pose.pose.position.x = float(self._traj_position[i, 0])
-            pose.pose.position.y = float(self._traj_position[i, 1])
-            pose.pose.position.z = float(self._traj_position[i, 2])
-
-            pose.pose.orientation.x = float(self._traj_quat[i, 0])
-            pose.pose.orientation.y = float(self._traj_quat[i, 1])
-            pose.pose.orientation.z = float(self._traj_quat[i, 2])
-            pose.pose.orientation.w = float(self._traj_quat[i, 3])
-
-            path_msg.poses.append(pose)
-
-        return path_msg
-    
-    
-    def to_orientation_markers(self, frame_id="map") -> MarkerArray:
-        marker_array = MarkerArray()
-        for i in range(0, self._nb_points, 5):  # Downsample for clarity
-            marker = Marker()
-            marker.header.frame_id = frame_id
-            # marker.header.stamp = self._logger.get_clock().now().to_msg()
-            marker.ns = "traj_orientation"
-            marker.id = i
-            marker.type = Marker.ARROW
-            marker.action = Marker.ADD
-            marker.pose.position.x = self._traj_position[i, 0]
-            marker.pose.position.y = self._traj_position[i, 1]
-            marker.pose.position.z = self._traj_position[i, 2]
-            marker.pose.orientation.x = self._traj_quat[i, 0]
-            marker.pose.orientation.y = self._traj_quat[i, 1]
-            marker.pose.orientation.z = self._traj_quat[i, 2]
-            marker.pose.orientation.w = self._traj_quat[i, 3]
-            marker.scale.x = 0.3  # shaft length
-            marker.scale.y = 0.05  # shaft diameter
-            marker.scale.z = 0.05  # head diameter
-            marker.color.r = 0.0
-            marker.color.g = 1.0
-            marker.color.b = 0.0
-            marker.color.a = 1.0
-            marker_array.markers.append(marker)
-        return marker_array

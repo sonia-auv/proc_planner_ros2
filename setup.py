@@ -4,7 +4,7 @@ package_name = 'proc_planner_ros2'
 
 setup(
     name=package_name,
-    version='0.0.0',
+    version='1.0.0',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -13,9 +13,9 @@ setup(
         ('share/' + package_name + '/launch', ['launch/launch.py']),
         ('share/' + package_name + '/config', ['config/proc_planner_config.yaml']),
     ],
-    install_requires=['setuptools','numpy', 'scipy'],
+    install_requires=['setuptools','numpy==1.24.4', 'scipy==1.10.1'],
     zip_safe=True,
-    maintainer='sonia2',
+    maintainer='SONIA',
     maintainer_email='log.sonia.club@etsmtl.ca',
     description='TODO: Package description',
     license='TODO: License declaration',

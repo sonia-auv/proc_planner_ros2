@@ -350,9 +350,9 @@ contextmanager-decorators=contextlib.contextmanager
 # expressions are accepted.
 generated-members=
 
-# Tells whether missing members accessed in mixin class should be ignored. A
-# mixin class is detected if its name ends with "mixin" (case insensitive).
-ignore-mixin-members=yes
+# # Tells whether missing members accessed in mixin class should be ignored. A
+# # mixin class is detected if its name ends with "mixin" (case insensitive).
+# ignore-checks-for-mixin=Y
 
 # Tells whether to warn about missing members when the owner of the attribute
 # is inferred to be None.
@@ -501,5 +501,5 @@ preferred-modules=
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "BaseException, Exception".
-overgeneral-exceptions=BaseException,
-                       Exception
+overgeneral-exceptions=builtins.BaseException,
+                       builtins.Exception

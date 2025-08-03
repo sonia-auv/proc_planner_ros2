@@ -12,14 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ament_flake8.main import main_with_errors
+# from ament_flake8.main import main_with_errors
 import pytest
+from pylint.lint import Run
+# import pylint
 
-@pytest.mark.flake8
+
+# @pytest.mark.flake8
+# @pytest.mark.linter
+# @pytest.mark.skip
+# def test_flake8():
+#     rc, errors = main_with_errors(argv=[])
+#     assert rc == 0, \
+#         'Found %d code style errors / warnings:\n' % len(errors) + \
+#         '\n'.join(errors)
+
+@pytest.mark.pylint
 @pytest.mark.linter
-@pytest.mark.skip
-def test_flake8():
-    rc, errors = main_with_errors(argv=[])
-    assert rc == 0, \
-        'Found %d code style errors / warnings:\n' % len(errors) + \
-        '\n'.join(errors)
+def test_pylint():
+    # pylint.run_pylint(argv=['proc_planner_ros2'])
+    r = Run(args=['proc_planner_ros2', 'launch', 'setup.py'], exit=False)
+    # r.linter.stats.global_note
+    assert r.linter.stats.global_note >= 9.0
+    

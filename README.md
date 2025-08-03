@@ -11,7 +11,7 @@ Package that manages the proc_planner in ROS2. It's main job is to take waypoint
 This package is in python and has some package dependencies. To install run the following:
 
 ```bash
-python3 -m pip install numpy scipy
+python3 -m pip install "numpy==1.14.4 scipy==1.10.1"
 ```
 
 It also depends on sonia_common_ros2.
