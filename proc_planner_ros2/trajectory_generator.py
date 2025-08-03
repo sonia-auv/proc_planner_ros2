@@ -5,14 +5,18 @@ from typing import Optional, Tuple
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Pose as geoPose
+from geometry_msgs.msg import Pose as geoPose, PoseStamped
 from geometry_msgs.msg import Transform, Twist
 from sonia_common_ros2.msg import Pose as soniaPose
 from sonia_common_ros2.msg import PoseArray
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
-from scipy.spatial.transform import Rotation
+from scipy.spatial.transform import Rotation, Slerp
 from scipy.interpolate import PchipInterpolator, CubicSpline
 from scipy.ndimage import map_coordinates
+
+from builtin_interfaces.msg import Time
+from nav_msgs.msg import Path
+from visualization_msgs.msg import Marker, MarkerArray
 
 
 class TrajectoryGenerator:
@@ -94,7 +98,7 @@ class TrajectoryGenerator:
 
         # Calculate the time between each waypoint
         if self._status == self.TrajectoryStatus.RECEIVED_VALID_WAYPTS and bool(self._compute_time_arrival()):
-            self._nb_points = int(np.round(self._time_list[-1][0] / self._ros_param["ts"]))
+            self._nb_points = int(np.round(self._time_list[-1][0] / float(self._ros_param["ts"])))
         else:
             self._nb_points = 1
 
@@ -165,7 +169,7 @@ class TrajectoryGenerator:
         # Copy points to the second value to force inital acceleration to zero
         self._point_list[1, :] = self._point_list[0, :]
         self._quat_list[1, :] = self._quat_list[0, :]
-        self._time_list[1, :] = self._ros_param["ts"]
+        self._time_list[1, :] = float(self._ros_param["ts"])
         self._course_list[0, 1] = eul[0]
         self._speed_list[0, 1] = self._speed_list[0, 0]
         return True
@@ -328,9 +332,9 @@ class TrajectoryGenerator:
             vamax = 0
             speed = self._speed_list[0, i]
             if speed == 0:
-                amax = self._ros_param["normal_speed.maximum_acceleration"]
-                vlmax = self._ros_param["normal_speed.maximum_velocity"]
-                vamax = self._ros_param["normal_speed.maximum_angular_rate"]
+                amax = float(self._ros_param["normal_speed.maximum_acceleration"])
+                vlmax = float(self._ros_param["normal_speed.maximum_velocity"])
+                vamax = float(self._ros_param["normal_speed.maximum_angular_rate"])
             elif speed == 1:
                 amax = self._ros_param["high_speed.maximum_acceleration"]
                 vlmax = self._ros_param["high_speed.maximum_velocity"]
@@ -358,21 +362,29 @@ class TrajectoryGenerator:
             travel_angle = 2 * np.arctan2(np.linalg.norm(q_rel[1:3]), q_rel[0])
             ta = travel_angle / vamax
 
-            tmax = np.max(np.array([tl, ta, self._ros_param["ts"]]))
+            tmax = np.max(np.array([tl, ta, float(self._ros_param["ts"])]))
 
-            t_residual = np.mod(tmax, self._ros_param["ts"])
+            t_residual = np.mod(tmax, float(self._ros_param["ts"]))
             if t_residual > 0:
-                tmax = tmax + (self._ros_param["ts"] - t_residual)
+                tmax = tmax + (float(self._ros_param["ts"]) - t_residual)
 
             self._time_list[i, 0] = self._time_list[i - 1, 0] + tmax
         return True
 
+
+    def _interpolate_quaternions(self, t):
+        key_times = self._time_list[:, 0]
+        key_rots = Rotation.from_quat(self._quat_list)
+        slerp = Slerp(key_times, key_rots)
+        interp_rots = slerp(t)
+        return interp_rots.as_quat()
+
     def _interpolate_waypoints(self):
 
-        t = np.arange(
-            start=self._ros_param["ts"],
-            stop=self._time_list[-1, 0] + self._ros_param["ts"],
-            step=self._ros_param["ts"],
+        t = np.linspace(
+            start=float(self._ros_param["ts"]),
+            stop=np.round(self._time_list[-1, 0], 1),
+            num=self._traj_position[:, 0].shape[0]
         )
 
         self._traj_position[:, 0] = self._interp_strategy(self._time_list[:, 0], self._point_list[:, 0], t, False).T
@@ -386,6 +398,9 @@ class TrajectoryGenerator:
         self._traj_linear_acceleration[:, 0] = np.append([0], np.diff(self._traj_body_velocity[:, 0]))
         self._traj_linear_acceleration[:, 1] = np.append([0], np.diff(self._traj_body_velocity[:, 1]))
         self._traj_linear_acceleration[:, 2] = np.append([0], np.diff(self._traj_body_velocity[:, 2]))
+
+        # interp_quats = self._interpolate_quaternions(t)
+        # self._traj_quat[:, :] = interp_quats
 
         self._traj_quat[:, 0] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 0])(t).T
         self._traj_quat[:, 1] = PchipInterpolator(self._time_list[:, 0], self._quat_list[:, 1])(t).T
@@ -412,9 +427,9 @@ class TrajectoryGenerator:
 
             self._traj_angular_rates[i, :] = -self._traj_angular_rates[i, :]
 
-            self._traj_linear_acceleration[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(
-                self._traj_linear_acceleration[i, :]
-            )
+            # self._traj_linear_acceleration[i, :] = Rotation.from_quat(self._traj_quat[i, :]).apply(
+            #     self._traj_linear_acceleration[i, :]
+            # )
 
         self._traj_anglular_acceleration[:, 0] = np.append([0], np.diff(self._traj_angular_rates[:, 0]))
         self._traj_anglular_acceleration[:, 1] = np.append([0], np.diff(self._traj_angular_rates[:, 1]))
@@ -518,3 +533,54 @@ class TrajectoryGenerator:
         angular_rates = -(inv_e2 @ q_dot)  # Matrix multiplication
 
         return angular_rates
+
+
+    def to_nav_path(self, frame_id: str = "map"):
+        path_msg = Path()
+        path_msg.header.frame_id = frame_id
+        # path_msg.header.stamp = self._logger.get_clock().now().to_msg()
+
+        for i in range(self._nb_points):
+            pose = PoseStamped()
+            pose.header.frame_id = frame_id
+            pose.header.stamp = path_msg.header.stamp
+            pose.pose.position.x = float(self._traj_position[i, 0])
+            pose.pose.position.y = float(self._traj_position[i, 1])
+            pose.pose.position.z = float(self._traj_position[i, 2])
+
+            pose.pose.orientation.x = float(self._traj_quat[i, 0])
+            pose.pose.orientation.y = float(self._traj_quat[i, 1])
+            pose.pose.orientation.z = float(self._traj_quat[i, 2])
+            pose.pose.orientation.w = float(self._traj_quat[i, 3])
+
+            path_msg.poses.append(pose)
+
+        return path_msg
+    
+    
+    def to_orientation_markers(self, frame_id="map") -> MarkerArray:
+        marker_array = MarkerArray()
+        for i in range(0, self._nb_points, 5):  # Downsample for clarity
+            marker = Marker()
+            marker.header.frame_id = frame_id
+            # marker.header.stamp = self._logger.get_clock().now().to_msg()
+            marker.ns = "traj_orientation"
+            marker.id = i
+            marker.type = Marker.ARROW
+            marker.action = Marker.ADD
+            marker.pose.position.x = self._traj_position[i, 0]
+            marker.pose.position.y = self._traj_position[i, 1]
+            marker.pose.position.z = self._traj_position[i, 2]
+            marker.pose.orientation.x = self._traj_quat[i, 0]
+            marker.pose.orientation.y = self._traj_quat[i, 1]
+            marker.pose.orientation.z = self._traj_quat[i, 2]
+            marker.pose.orientation.w = self._traj_quat[i, 3]
+            marker.scale.x = 0.3  # shaft length
+            marker.scale.y = 0.05  # shaft diameter
+            marker.scale.z = 0.05  # head diameter
+            marker.color.r = 0.0
+            marker.color.g = 1.0
+            marker.color.b = 0.0
+            marker.color.a = 1.0
+            marker_array.markers.append(marker)
+        return marker_array

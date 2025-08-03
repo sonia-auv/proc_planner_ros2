@@ -4,11 +4,14 @@ import rclpy
 from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.node import Node
 from sonia_common_ros2.msg import PoseArray
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
+from builtin_interfaces.msg import Time
 from std_msgs.msg import Int8
+from nav_msgs.msg import Path
 
 from proc_planner_ros2.trajectory_generator import TrajectoryGenerator
+from visualization_msgs.msg import Marker, MarkerArray
 
 
 class ProcPlannerNode(Node):
@@ -23,6 +26,8 @@ class ProcPlannerNode(Node):
         self._sub_curr_target = self.create_subscription(Pose, "/proc_control/current_target", self._curr_target_cb, 10)
 
         self._pub_traj = self.create_publisher(MultiDOFJointTrajectoryPoint, "/proc_planner/send_trajectory_list", 10)
+        self._pub_traj_nav = self.create_publisher(Path, "/proc_planner/send_trajectory_list_nav", 10)
+        self._pub_traj_orien = self.create_publisher(MarkerArray, "/proc_planner/send_trajectory_list_orien", 10)
         self._pub_is_valid = self.create_publisher(Int8, "/proc_planner/is_waypoint_valid", 10)
 
         self._latest_curr_target = None
@@ -79,7 +84,7 @@ class ProcPlannerNode(Node):
             self._ros_params[param.name] = param.value
 
         for param in self._ros_params.items():
-            self.get_logger().info(param + ": " + str(param))
+            self.get_logger().info(str(param) + ": " + str(param))
 
     def _mult_add_pose_cb(self, msg: PoseArray):
 
@@ -93,8 +98,12 @@ class ProcPlannerNode(Node):
 
         if traj_gen.status == traj_gen.TrajectoryStatus.RECEIVED_VALID_WAYPTS:
             traj_msg = traj_gen.compute()
+            traj_msg_nav = traj_gen.to_nav_path()
+            traj_msg_orien = traj_gen.to_orientation_markers()
             if traj_msg is not None:
                 self._pub_traj.publish(traj_msg)
+                self._pub_traj_nav.publish(traj_msg_nav)
+                self._pub_traj_orien.publish(traj_msg_orien)
 
         self._latest_curr_target = None
 
