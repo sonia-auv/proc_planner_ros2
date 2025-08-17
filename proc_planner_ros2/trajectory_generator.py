@@ -44,6 +44,13 @@ from sonia_common_ros2.msg import PoseArray
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
 
 
+def _yaw_from_quat_xyzw(q_xyzw: np.ndarray) -> float:
+    """Yaw (Z, radians) from quaternion [x,y,z,w]."""
+    x, y, z, w = q_xyzw
+    siny_cosp = 2.0 * (w * z + x * y)
+    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+    return np.arctan2(siny_cosp, cosy_cosp)
+
 # pylint: disable=too-many-instance-attributes
 class TrajectoryGenerator:
     """
@@ -189,14 +196,15 @@ class TrajectoryGenerator:
 
         self._time_list[0, :] = 0
         self._speed_list[0, 0] = 0
-        eul = np.rad2deg(Rotation.from_quat(self._quat_list[0, :]).as_euler('ZYX'))
-        self._course_list[0, 0] = eul[0]
+        # eul = np.rad2deg(Rotation.from_quat(self._quat_list[0, :]).as_euler('ZYX'))
+        yaw0 = np.degrees(_yaw_from_quat_xyzw(self._quat_list[0, :]))
+        self._course_list[0, 0] = yaw0
 
         # Copy points to the second value to force inital acceleration to zero
         self._point_list[1, :] = self._point_list[0, :]
         self._quat_list[1, :] = self._quat_list[0, :]
         self._time_list[1, :] = float(self._ros_param['ts'])
-        self._course_list[0, 1] = eul[0]
+        self._course_list[0, 1] = yaw0
         self._speed_list[0, 1] = self._speed_list[0, 0]
         return True
 
@@ -384,10 +392,17 @@ class TrajectoryGenerator:
             if vl > vlmax:
                 tl = (4 * d) / (3 * vlmax)
 
-            q_rel = (
-                Rotation.from_quat(np.conj(self._quat_list[i - 1, :])).inv() * Rotation.from_quat(self._quat_list[i, :])
-            ).as_quat()
-            travel_angle = 2 * np.arctan2(np.linalg.norm(q_rel[1:3]), q_rel[0])
+            # q_rel = (
+            #     Rotation.from_quat(np.conj(self._quat_list[i - 1, :])).inv() * Rotation.from_quat(self._quat_list[i, :])
+            # ).as_quat()
+            # travel_angle = 2 * np.arctan2(np.linalg.norm(q_rel[1:3]), q_rel[0])
+
+            q_rel = (Rotation.from_quat(self._quat_list[i - 1, :]).inv() *
+                    Rotation.from_quat(self._quat_list[i, :])).as_quat()  # [x,y,z,w]
+
+            v = q_rel[0:3]   # vector part
+            w = q_rel[3]     # scalar part
+            travel_angle = 2.0 * np.arctan2(np.linalg.norm(v), w)
             ta = travel_angle / vamax
 
             tmax = np.max(np.array([tl, ta, float(self._ros_param['ts'])]))
@@ -519,12 +534,22 @@ class TrajectoryGenerator:
         return np.array([w, x, y, z])
 
     @staticmethod
-    def _get_course_angle(q):
-        eul = Rotation.from_quat(q).as_euler('ZYX', degrees=True)
-        if eul[0] < 0:
-            eul[0] += 360
+    def _get_course_angle(q_xyzw):
+        # eul = Rotation.from_quat(q).as_euler('ZYX', degrees=True)
+        # if eul[0] < 0:
+        #     eul[0] += 360
 
-        return eul[0]
+        # return eul[0]
+        yaw = np.degrees(TrajectoryGenerator._yaw_from_quat_xyzw(q_xyzw))
+        if yaw < 0:
+            yaw += 360.0
+        return yaw
+    @staticmethod
+    def _yaw_from_quat_xyzw(q):
+        x, y, z, w = q  # [x,y,z,w]
+        siny_cosp = 2.0 * (w * z + x * y)
+        cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
+        return np.arctan2(siny_cosp, cosy_cosp)  # radians
 
     @staticmethod
     def _quat_to_angular_rates(q, q_dot):
