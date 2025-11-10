@@ -1,6 +1,6 @@
 /proc_planner_ros2:
   ros__parameters:
-    ts: 0.05 # s
+    ts: 0.1 # s
     max_depth: 5.0 # m
     surface_warning: 0.3 # m
     low_speed:
