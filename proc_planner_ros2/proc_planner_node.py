@@ -108,7 +108,7 @@ class ProcPlannerNode(Node):
             self._ros_params[param.name] = param.value
 
         for param in self._ros_params.items():
-            self.get_logger().info(str(param) + ': ' + str(param))
+            self.get_logger().info(str(param[0]) + " : " + str(param[1]))
 
     def _mult_add_pose_cb(self, msg: PoseArray):
 

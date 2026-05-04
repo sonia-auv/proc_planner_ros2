@@ -475,6 +475,7 @@ class TrajectoryGenerator:
             transform.rotation.x = float(self._traj_quat[i, 0])
             transform.rotation.y = float(self._traj_quat[i, 1])
             transform.rotation.z = float(self._traj_quat[i, 2])
+            self._logger.info(f'Quaternion result {i} : {transform.rotation.w}, {transform.rotation.x}, {transform.rotation.y}, {transform.rotation.z}')
 
             velocities = Twist()
             velocities.linear.x = float(self._traj_body_velocity[i, 0])
@@ -483,6 +484,7 @@ class TrajectoryGenerator:
             velocities.angular.x = float(self._traj_angular_rates[i, 0])
             velocities.angular.y = float(self._traj_angular_rates[i, 1])
             velocities.angular.z = float(self._traj_angular_rates[i, 2])
+            self._logger.info(f'Quaternion result {i} : {velocities.angular.x}, {velocities.angular.y}, {velocities.angular.z}')
 
             accelerations = Twist()
             accelerations.linear.x = float(self._traj_linear_acceleration[i, 0])
