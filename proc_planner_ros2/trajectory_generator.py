@@ -98,7 +98,7 @@ class TrajectoryGenerator:
         # supplementary points for rounding
         supp_point = 0
         for pose in self._mult_add_pose_msg.poses:
-            if pose.fine != 0:
+            if pose.fine != 0 or pose.frame == soniaPose.FRAME_REL_DEBRIT_POS:
                 supp_point = supp_point + 1
 
         # number of waypoints + support_points + current position + initial condition
@@ -270,6 +270,14 @@ class TrajectoryGenerator:
                     i + self._curr_pos_offset - 1, :
                 ] + Rotation.from_quat(self._quat_list[i + self._curr_pos_offset - 1, :]).apply(p)
                 self._point_list[i + self._curr_pos_offset, 2] = p[2]
+            elif frame == soniaPose.FRAME_REL_DEBRIT_POS:
+                self._quat_list[i + self._curr_pos_offset, :] = (
+                    Rotation.from_quat(self._quat_list[i + self._curr_pos_offset - 1, :]) * Rotation.from_quat(q)
+                ).as_quat()
+
+                self._point_list[i + self._curr_pos_offset, :] = np.array([p[0], p[1] + 0.6, p[2]])
+                self._point_list[i + self._curr_pos_offset, :] = np.array([p[0] + 0.6, p[1], p[2]])
+                i += 1
             else:
                 # TODO: Obstical stuff
                 return
