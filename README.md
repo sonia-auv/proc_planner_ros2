@@ -1,36 +1,69 @@
 # proc_planner_ros2
 
-## Description
+The packages is the in-between the client and the control system for the prototype. It handles converting created waypoints from the client into series of transformations that the control can use to create a smooth trajectory the prototype can use to navigate.
 
-Package that manages the proc_planner in ROS2. It's main job is to take waypoints and convert them into a series of transformations that the control can use to create a smooth trajectory.
+---
+## Dependencies
 
-## Build
+### ROS 2 Distro
 
-### Dependencies
+* Humble
 
-This package is in python and has some package dependencies. To install run the following:
+### ROS 2 Packages
+
+* `ament_python`
+* `rclpy`
+* `trajectory_msgs`
+* `geometry_msgs`
+* `std_msgs`
+
+### Sonia packages
+
+* `sonia_common_ros2`
+
+### External packages
+
+* `setuptools`
+* `numpy (1.24.4)`
+* `scipy (1.10.1)`
+
+---
+
+## Node
+
+* Name: `proc_planner`
+
+---
+
+## Registered Topics / Services / Actions
+
+| Type   | Name                                | Direction  | Message/Service Type                               | Description                          |
+| ------ | ----------------------------------- | -----------| -------------------------------------------------- | ------------------------------------ |
+| Topi   | `/proc_planner/send_trajectory_list`| Published  | `trajectory_msgs/msg/MultiDOFJointTrajectoryPoint` | Messages containing a trajectory list|
+| Topic  | `/proc_planner/is_waypoint_valid`   | Published  | `std_msgs/msg/Bool`                                | Message to validate the waypoint     |
+| Topic  | `/proc_control/send_pose_array`     | Subscribed | `sonia_common_ros2/msg/PoseArray`                  | Messages of an array of waypoints    |
+| Topic  | `/proc_control/current_target`      | Subscribed | `geometry_msgs/msg/Pose`                           | Message contains current position    |
+
+---
+## Build Instructions
+To build the project, the following commands should be run directly from your ROS2 workspace.
 
 ```bash
-python3 -m pip install "numpy==1.14.4 scipy==1.10.1"
+colcon build --packages-select proc_planner_ros2 --symlink-install
+source install/setup.bash
 ```
 
-It also depends on sonia_common_ros2.
+---
 
-### Build process
+## Launch Instructions
+
+### Default launch
+The command launchs the mission server 
 
 ```bash
-colcon build --packages-select proc_planner_ros2
+ros2 launch sonia_bt_runner launch.py
 ```
-
-## Usage
-
-To run the proc planner node, use the following command:
-
-```bash
-ros2 launch proc_planner_ros2 launch.py
-```
-
-The Launch file loads the nessesary ros parameters.
+---
 
 ## ROS Info
 
@@ -49,17 +82,7 @@ The Launch file loads the nessesary ros parameters.
 - `high_speed.maximum_velocity [double]`: Maximum velocity for the high speed profile.
 - `high_speed.maximum_angular_rate [double]`: Maximum angular rate for the high speed profile.
 
-### Topics
-
-#### Subscriptions
-
-- `/proc_control/send_pose_array [sonia_common_ros2.msg.PoseArray]` : Receive the array of waypoints.
-- `/proc_control/current_target [geometry_msgs.msg.Pose]` : Receive the current position.
-
-#### Publications
-
-- `/proc_planner/send_trajectory_list [trajectory_msgs.msg.MultiDOFJointTrajectoryPoint]` : Send the trajectory list.
-- `/proc_planner/is_waypoint_valid [std_msgs.msg.Bool]` : Send if the waypoint is valid.
+---
 
 ## License
 
