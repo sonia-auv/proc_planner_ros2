@@ -1,6 +1,6 @@
 # proc_planner_ros2
 
-The packages is the in-between the client and the control system for the prototype. It handles converting created waypoints from the client into series of transformations that the control can use to create a smooth trajectory the prototype can use to navigate.
+The package is the node in between the client and the control system of the **AUV** prototype. It handles converting created waypoints by the client into series of transformations that the control can use to create a smooth trajectory the prototype can use to navigate.
 
 ---
 ## Dependencies
