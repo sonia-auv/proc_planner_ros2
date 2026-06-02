@@ -61,7 +61,7 @@ source install/setup.bash
 The command launchs the mission server 
 
 ```bash
-ros2 launch sonia_bt_runner launch.py
+ros2 launch proc_planner_ros2 launch.py
 ```
 ---
 
