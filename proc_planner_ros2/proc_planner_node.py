@@ -44,7 +44,7 @@ class ProcPlannerNode(Node):
     """Proc Planer Node."""
 
     def __init__(self):
-        super().__init__('proc_planner_ros2')
+        super().__init__('proc_planner')
         self._sub_mult_add_pose = self.create_subscription(
             PoseArray, '/proc_planner/send_pose_array', self._mult_add_pose_cb, 10
         )
