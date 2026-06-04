@@ -122,6 +122,7 @@ class ProcPlannerNode(Node):
 
         if self._latest_curr_target is None:
             return
+        self.node_status.state = NodeStatus.STATE_RUNNING
         traj_gen = TrajectoryGenerator(msg, self._latest_curr_target, self._ros_params, self.get_logger())
 
         valid_msg = Int8()
