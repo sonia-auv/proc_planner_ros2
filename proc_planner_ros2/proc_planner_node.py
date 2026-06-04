@@ -30,7 +30,6 @@
 """Proc Planner Node."""
 
 import rclpy
-import time
 from rclpy.clock import Clock
 from geometry_msgs.msg import Pose
 from sonia_common_ros2.msg import PoseArray, NodeStatus
