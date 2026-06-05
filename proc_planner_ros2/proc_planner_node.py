@@ -30,29 +30,31 @@
 """Proc Planner Node."""
 
 import rclpy
+from rclpy.clock import Clock
 from geometry_msgs.msg import Pose
-from sonia_common_ros2.msg import PoseArray
+from sonia_common_ros2.msg import PoseArray, NodeStatus
 from std_msgs.msg import Int8
 from rclpy.node import Node
 from rcl_interfaces.msg import ParameterDescriptor
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
 from proc_planner_ros2.trajectory_generator import TrajectoryGenerator
 
-
-
 class ProcPlannerNode(Node):
     """Proc Planer Node."""
 
     def __init__(self):
-        super().__init__('proc_planner_ros2')
+        super().__init__('proc_planner')
         self._sub_mult_add_pose = self.create_subscription(
             PoseArray, '/proc_planner/send_pose_array', self._mult_add_pose_cb, 10
         )
         self.get_logger()
         self._sub_curr_target = self.create_subscription(Pose, '/proc_control/current_target', self._curr_target_cb, 10)
 
+        self._pub_node_status = self.create_publisher(NodeStatus, '/system_monitor/node_status', 1)
         self._pub_traj = self.create_publisher(MultiDOFJointTrajectoryPoint, '/proc_planner/send_trajectory_list', 10)
         self._pub_is_valid = self.create_publisher(Int8, '/proc_planner/is_waypoint_valid', 10)
+
+        self._timer_node_status = self.create_timer(0.5, self._publish_status)
 
         self._latest_curr_target = None
 
@@ -110,10 +112,16 @@ class ProcPlannerNode(Node):
         for param in self._ros_params.items():
             self.get_logger().info(str(param) + ': ' + str(param))
 
+        self.node_status = NodeStatus()
+        self.node_status.node_name = self.get_name()
+        self.node_status.quality = NodeStatus.Q_OK
+        self.node_status.state = NodeStatus.STATE_IDLE
+
     def _mult_add_pose_cb(self, msg: PoseArray):
 
         if self._latest_curr_target is None:
             return
+        self.node_status.state = NodeStatus.STATE_RUNNING
         traj_gen = TrajectoryGenerator(msg, self._latest_curr_target, self._ros_params, self.get_logger())
 
         valid_msg = Int8()
@@ -129,3 +137,7 @@ class ProcPlannerNode(Node):
 
     def _curr_target_cb(self, msg: Pose):
         self._latest_curr_target = msg
+
+    def _publish_status(self):
+        self.node_status.stamp = Clock().now().to_msg()
+        self._pub_node_status.publish(self.node_status)

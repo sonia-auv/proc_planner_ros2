@@ -41,6 +41,7 @@ The package is the **ROS2** node between the client and the control system of th
 | ------ | ----------------------------------- | -----------| -------------------------------------------------- | ------------------------------------ |
 | Topic  | `/proc_planner/send_trajectory_list`| Published  | `trajectory_msgs/msg/MultiDOFJointTrajectoryPoint` | Messages containing a trajectory list|
 | Topic  | `/proc_planner/is_waypoint_valid`   | Published  | `std_msgs/msg/Bool`                                | Message to validate the waypoint     |
+| Topic  | `/system_monitor/node_status`       | Published  | `sonia_common_ros2/msg/NodeStatus`                 | Message provide state of the ndoe    |
 | Topic  | `/proc_control/send_pose_array`     | Subscribed | `sonia_common_ros2/msg/PoseArray`                  | Messages of an array of waypoints    |
 | Topic  | `/proc_control/current_target`      | Subscribed | `geometry_msgs/msg/Pose`                           | Message contains current position    |
 

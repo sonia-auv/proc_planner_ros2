@@ -1,4 +1,4 @@
-/proc_planner_ros2:
+/proc_planner:
   ros__parameters:
     ts: 0.1 # s
     max_depth: 5.0 # m
