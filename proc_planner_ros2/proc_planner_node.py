@@ -58,37 +58,37 @@ class ProcPlannerNode(Node):
 
         self._latest_curr_target = None
 
-        self.declare_parameter('ts', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value))
-        self.declare_parameter('max_depth', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value))
+        self.declare_parameter('ts',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value))
+        self.declare_parameter('max_depth',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value))
         self.declare_parameter(
-            'surface_warning', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'surface_warning',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'low_speed.maximum_acceleration', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'low_speed.maximum_acceleration',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'low_speed.maximum_velocity', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'low_speed.maximum_velocity',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'low_speed.maximum_angular_rate', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'low_speed.maximum_angular_rate',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'normal_speed.maximum_acceleration', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'normal_speed.maximum_acceleration',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'normal_speed.maximum_velocity', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'normal_speed.maximum_velocity',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'normal_speed.maximum_angular_rate', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'normal_speed.maximum_angular_rate',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'high_speed.maximum_acceleration', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'high_speed.maximum_acceleration',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'high_speed.maximum_velocity', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'high_speed.maximum_velocity',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.declare_parameter(
-            'high_speed.maximum_angular_rate', descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
+            'high_speed.maximum_angular_rate',0.0, descriptor=ParameterDescriptor(type=rclpy.Parameter.Type.DOUBLE.value)
         )
         self.get_logger().info('Parameters declared')
         self._ros_params = {}
